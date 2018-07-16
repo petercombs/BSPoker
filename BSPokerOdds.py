@@ -1,7 +1,7 @@
 from __future__ import print_function
 #from sys import stderr
 from collections import Counter
-from numpy import diff, zeros, arange, argsort
+from numpy import diff, zeros, arange, argsort, log2
 from numpy.random import shuffle
 
 
@@ -93,12 +93,17 @@ def AverageBadness(cardsPerSuit, numSuits, minPerPlayer, maxPerPlayer,
                    numPlayers, iterations=1e4):
     badness = 0
     n = 0
-    expected_order = arange(len(check_hands))
+    #expected_order = arange(len(check_hands))
     for i in range(minPerPlayer * numPlayers, maxPerPlayer*numPlayers+1):
         probs = SimulateMany(cardsPerSuit, numSuits, i, iterations)
-        badness += ((argsort(probs) - expected_order)**2).sum()
+        bad_diff = 0
+        for p1, p2 in zip(probs[:-1], probs[1:]):
+            l2rat = log2(p2/(p1+1/iterations))
+            if l2rat < 0:
+                bad_diff += l2rat
+        badness += bad_diff
         n += 1
-        print(i, badness)
+        print(i, bad_diff, badness)
     return badness/n
 
 
