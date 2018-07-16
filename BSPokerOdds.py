@@ -1,5 +1,7 @@
+from __future__ import print_function
+#from sys import stderr
 from collections import Counter
-from numpy import diff
+from numpy import diff, zeros, arange, argsort
 from numpy.random import shuffle
 
 
@@ -38,6 +40,9 @@ def FullHouse(cards, cardCounts, cardsPerSuit):
 def FourOfAKind(cards, cardCounts, cardsPerSuit):
     return cardCounts.most_common(1)[0][1] >= 4
 
+def FiveOfAKind(cards, cardCounts, cardsPerSuit):
+    return cardCounts.most_common(1)[0][1] >= 5
+
 def StraightFlush(cards, cardCounts, cardsPerSuit):
     if Flush(cards, cardCounts, cardsPerSuit):
         run = 1
@@ -52,6 +57,49 @@ def StraightFlush(cards, cardCounts, cardsPerSuit):
                 return True
     return False
 
+check_hands = [
+    FiveOfAKind,
+    StraightFlush,
+    FourOfAKind,
+    FullHouse,
+    Flush,
+    Straight,
+    ThreeOfAKind,
+    TwoPair,
+    Pair,
+]
+
+def SimulateOne(cardsPerSuit, numSuits, numCards, verbose=False):
+    res = zeros(len(check_hands), dtype=int)
+    deck = arange(cardsPerSuit * numSuits)
+    shuffle(deck)
+    cards = sorted(deck[:numCards])
+    cardCounts = Counter(card % cardsPerSuit for card in cards)
+    for i, func in enumerate(check_hands):
+        res[i] = func(cards, cardCounts, cardsPerSuit)
+    if verbose:
+        print(['{}{}'.format(i % cardsPerSuit+1, chr(ord('A')+i//cardsPerSuit))
+               for i in sorted(cards)])
+    return res
+
+def SimulateMany(cardsPerSuit, numSuits, numCards, iterations):
+    res = zeros(len(check_hands), dtype=int)
+    for i in range(int(iterations)):
+        res += SimulateOne(cardsPerSuit, numSuits, numCards)
+    return res/iterations
 
 
-def get_
+def AverageBadness(cardsPerSuit, numSuits, minPerPlayer, maxPerPlayer,
+                   numPlayers, iterations=1e4):
+    badness = 0
+    n = 0
+    expected_order = arange(len(check_hands))
+    for i in range(minPerPlayer * numPlayers, maxPerPlayer*numPlayers+1):
+        probs = SimulateMany(cardsPerSuit, numSuits, i, iterations)
+        badness += ((argsort(probs) - expected_order)**2).sum()
+        n += 1
+        print(i, badness)
+    return badness/n
+
+
+
